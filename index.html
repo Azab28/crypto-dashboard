@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+  <meta charset="UTF-8" />
+  <title>محفظتي للعملات الرقمية</title>
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#00cc88" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    /* نفس التنسيقات القديمة */
+    body {
+      background: #1e1e2a;
+      color: #e8e8e8;
+      font-family: Arial, sans-serif;
+      padding: 30px;
+    }
+    h1 {
+      text-align: center;
+      color: #00cc88;
+      margin-bottom: 30px;
+    }
+    h3 {
+      color: #e8e8e8;
+      margin-bottom: 15px;
+      text-align: center;
+    }
+    .widgets-container {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .card {
+      background: #282940;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+      padding: 15px;
+      flex: 1;
+      min-width: 320px;
+      max-width: 420px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+      color: #e8e8e8;
+    }
+    th,
+    td {
+      padding: 10px;
+      text-align: center;
+      border: 1px solid #383850;
+    }
+    th {
+      background: #383850;
+      color: #00cc88;
+    }
+    tr:nth-child(even) {
+      background: #2a2c3e;
+    }
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: bold;
+      text-align: center;
+      color: #00cc88;
+    }
+    input[type="number"] {
+      display: block;
+      margin: 0 auto 15px auto;
+      padding: 8px;
+      width: 150px;
+      border-radius: 6px;
+      border: none;
+      font-size: 16px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <h1>📊 محفظتي للعملات الرقمية</h1>
+
+  <div class="widgets-container">
+    <div class="card">
+      <h3>سعر TON</h3>
+      <script src="https://widgets.coingecko.com/gecko-coin-price-chart-widget.js"></script>
+      <gecko-coin-price-chart-widget
+        locale="en"
+        outlined="true"
+        coin-id="the-open-network"
+        initial-currency="usd"
+      ></gecko-coin-price-chart-widget>
+    </div>
+
+    <div class="card">
+      <h3>سعر Bitcoin</h3>
+      <gecko-coin-price-chart-widget
+        locale="en"
+        outlined="true"
+        coin-id="bitcoin"
+        initial-currency="usd"
+      ></gecko-coin-price-chart-widget>
+    </div>
+
+    <div class="card">
+      <h3>💼 محفظتي لـ TON</h3>
+      <label for="tonAmount">أدخل كمية TON:</label>
+      <input
+        type="number"
+        id="tonAmount"
+        min="0"
+        step="0.01"
+        value="150"
+        title="أدخل كمية عملة TON التي لديك"
+      />
+      <table id="portfolioTable">
+        <thead>
+          <tr>
+            <th>العملة</th>
+            <th>الكمية</th>
+            <th>السعر (دولار)</th>
+            <th>الإجمالي (دولار)</th>
+            <th>الإجمالي (جنيه)</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    const portfolio = [{ id: "the-open-network", name: "TON Coin", amount: 150 }];
+    const usdToEgp = 48.65;
+
+    async function loadPortfolio() {
+      try {
+        const ids = portfolio.map((c) => c.id).join(",");
+        const priceData = await fetch(
+          `https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd`
+        ).then((r) => r.json());
+
+        const tbody = document.querySelector("#portfolioTable tbody");
+        tbody.innerHTML = "";
+        let totalUSD = 0,
+          totalEGP = 0;
+
+        portfolio.forEach((c) => {
+          const priceUSD = priceData[c.id]?.usd || 0;
+          const valueUSD = (c.amount * priceUSD).toFixed(2);
+          const valueEGP = (valueUSD * usdToEgp).toFixed(2);
+          totalUSD += parseFloat(valueUSD);
+          totalEGP += parseFloat(valueEGP);
+
+          tbody.innerHTML += `<tr>
+            <td>${c.name}</td>
+            <td>${c.amount}</td>
+            <td>$${priceUSD.toFixed(2)}</td>
+            <td>$${valueUSD}</td>
+            <td>EGP ${valueEGP}</td>
+          </tr>`;
+        });
+
+        tbody.innerHTML += `<tr style="font-weight:bold; background:#383850;">
+          <td colspan="3">الإجمالي</td>
+          <td>$${totalUSD.toFixed(2)}</td>
+          <td>EGP ${totalEGP.toFixed(2)}</td>
+        </tr>`;
+      } catch (err) {
+        console.error("خطأ في تحميل المحفظة:", err);
+      }
+    }
+
+    document.getElementById("tonAmount").addEventListener("input", (e) => {
+      portfolio[0].amount = parseFloat(e.target.value) || 0;
+      loadPortfolio();
+    });
+
+    loadPortfolio();
+
+    // تسجيل Service Worker
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker
+          .register("service-worker.js")
+          .then(() => {
+            console.log("Service Worker مسجل بنجاح");
+          })
+          .catch((err) => {
+            console.error("فشل تسجيل Service Worker:", err);
+          });
+      });
+    }
+  </script>
+</body>
+</html>
