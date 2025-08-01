@@ -6,7 +6,6 @@
   <meta name="theme-color" content="#00cc88" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-    /* نفس التنسيقات القديمة */
     body {
       background: #1e1e2a;
       color: #e8e8e8;
@@ -44,8 +43,7 @@
       margin-top: 10px;
       color: #e8e8e8;
     }
-    th,
-    td {
+    th, td {
       padding: 10px;
       text-align: center;
       border: 1px solid #383850;
@@ -74,14 +72,9 @@
       font-size: 16px;
       text-align: center;
     }
-  </style>
-</head>
-<body>
-  <h1>📊 محفظتي للعملات الرقمية</h1>
- <!-- زر التحديث اليدوي -->
-  <button id="reloadBtn" style="
+    #reloadBtn {
       display:block;
-      margin:0 auto 15px auto;
+      margin:0 auto 10px auto;
       padding:10px 20px;
       background:#00cc88;
       color:#fff;
@@ -89,14 +82,24 @@
       border-radius:6px;
       font-size:16px;
       cursor:pointer;
-    ">
-    🔄 تحديث الآن
-  </button>
+    }
+    #lastUpdated {
+      text-align:center;
+      margin-top:10px;
+      font-size:14px;
+      color:#aaa;
+    }
+  </style>
+</head>
+<body>
+  <h1>📊 محفظتي للعملات الرقمية</h1>
+
   <div class="widgets-container">
     <div class="card">
       <h3>سعر TON</h3>
       <script src="https://widgets.coingecko.com/gecko-coin-price-chart-widget.js"></script>
       <gecko-coin-price-chart-widget
+        id="tonWidget"
         locale="en"
         outlined="true"
         coin-id="the-open-network"
@@ -107,6 +110,7 @@
     <div class="card">
       <h3>سعر Bitcoin</h3>
       <gecko-coin-price-chart-widget
+        id="btcWidget"
         locale="en"
         outlined="true"
         coin-id="bitcoin"
@@ -123,8 +127,8 @@
         min="0"
         step="0.01"
         value="150"
-        title="أدخل كمية عملة TON التي لديك"
       />
+      <button id="reloadBtn">🔄 تحديث الآن</button>
       <table id="portfolioTable">
         <thead>
           <tr>
@@ -137,15 +141,21 @@
         </thead>
         <tbody></tbody>
       </table>
+      <div id="lastUpdated">⏳ لم يتم التحديث بعد</div>
     </div>
   </div>
 
   <script>
     const portfolio = [{ id: "the-open-network", name: "TON Coin", amount: 150 }];
     const usdToEgp = 48.65;
+    const reloadBtn = document.getElementById("reloadBtn");
+    const lastUpdated = document.getElementById("lastUpdated");
 
     async function loadPortfolio() {
       try {
+        reloadBtn.textContent = "⏳ جارِ التحديث...";
+        reloadBtn.disabled = true;
+
         const ids = portfolio.map((c) => c.id).join(",");
         const priceData = await fetch(
           `https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd`
@@ -153,8 +163,7 @@
 
         const tbody = document.querySelector("#portfolioTable tbody");
         tbody.innerHTML = "";
-        let totalUSD = 0,
-          totalEGP = 0;
+        let totalUSD = 0, totalEGP = 0;
 
         portfolio.forEach((c) => {
           const priceUSD = priceData[c.id]?.usd || 0;
@@ -177,38 +186,47 @@
           <td>$${totalUSD.toFixed(2)}</td>
           <td>EGP ${totalEGP.toFixed(2)}</td>
         </tr>`;
+
+        const now = new Date();
+        lastUpdated.textContent = `✅ آخر تحديث: ${now.toLocaleTimeString()}`;
+
+        refreshWidgets();
+
       } catch (err) {
         console.error("خطأ في تحميل المحفظة:", err);
-
+      } finally {
+        reloadBtn.textContent = "🔄 تحديث الآن";
+        reloadBtn.disabled = false;
       }
     }
 
-    document.getElementById("tonAmount").addEventListener("input", (e) => {
-      portfolio[0].amount = parseFloat(e.target.value) || 0;
+    function refreshWidgets() {
+      document.querySelectorAll("gecko-coin-price-chart-widget").forEach(widget => {
+        const clone = widget.cloneNode(true);
+        widget.replaceWith(clone);
+      });
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      document.getElementById("tonAmount").addEventListener("input", (e) => {
+        portfolio[0].amount = parseFloat(e.target.value) || 0;
+        loadPortfolio();
+      });
+
+      reloadBtn.addEventListener("click", loadPortfolio);
+
       loadPortfolio();
+      setInterval(loadPortfolio, 20000);
     });
 
-    // زرار التحديث اليدوي
-  document.getElementById("reloadBtn").addEventListener("click", loadPortfolio);
-
-  // أول تحميل
-  loadPortfolio();
-
-  // تحديث تلقائي كل 20 ثانية
-  setInterval(loadPortfolio, 20000);
-
-
-    // تسجيل Service Worker
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {
         navigator.serviceWorker
           .register("service-worker.js")
-          .then(() => {
-            console.log("Service Worker مسجل بنجاح");
-          })
-          .catch((err) => {
-            console.error("فشل تسجيل Service Worker:", err);
-          });
+          .then(() => console.log("Service Worker مسجل بنجاح"))
+          .catch((err) => console.error("فشل تسجيل Service Worker:", err));
       });
     }
   </script>
+</body>
+</html>
