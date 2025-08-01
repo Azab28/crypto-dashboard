@@ -89,6 +89,17 @@
       font-size:14px;
       color:#aaa;
     }
+    #alertBox {
+      display:none;
+      margin:15px auto;
+      padding:10px;
+      background:#ff4444;
+      color:#fff;
+      font-weight:bold;
+      text-align:center;
+      border-radius:6px;
+      max-width:400px;
+    }
   </style>
 </head>
 <body>
@@ -121,14 +132,14 @@
     <div class="card">
       <h3>💼 محفظتي لـ TON</h3>
       <label for="tonAmount">أدخل كمية TON:</label>
-      <input
-        type="number"
-        id="tonAmount"
-        min="0"
-        step="0.01"
-        value="150"
-      />
+      <input type="number" id="tonAmount" min="0" step="0.01" value="150" />
+
+      <label for="alertPrice">🔔 سعر التنبيه لـ TON:</label>
+      <input type="number" id="alertPrice" min="0" step="0.01" value="10" />
+
       <button id="reloadBtn">🔄 تحديث الآن</button>
+      <div id="alertBox"></div>
+
       <table id="portfolioTable">
         <thead>
           <tr>
@@ -150,6 +161,15 @@
     const usdToEgp = 48.65;
     const reloadBtn = document.getElementById("reloadBtn");
     const lastUpdated = document.getElementById("lastUpdated");
+    const alertBox = document.getElementById("alertBox");
+    let tonAlertPrice = parseFloat(document.getElementById("alertPrice").value);
+
+    // طلب إذن الإشعارات عند تحميل الصفحة
+    document.addEventListener("DOMContentLoaded", () => {
+      if ("Notification" in window && Notification.permission !== "granted") {
+        Notification.requestPermission();
+      }
+    });
 
     async function loadPortfolio() {
       try {
@@ -179,6 +199,25 @@
             <td>$${valueUSD}</td>
             <td>EGP ${valueEGP}</td>
           </tr>`;
+
+          // ✅ التنبيه عند وصول السعر + إشعار صوتي و نوتيفيكيشن
+          if (c.id === "the-open-network" && priceUSD >= tonAlertPrice) {
+            alertBox.style.display = "block";
+            alertBox.textContent = `🚨 تنبيه: TON وصل إلى ${priceUSD.toFixed(2)}$ (أعلى من ${tonAlertPrice}$)`;
+
+            // تشغيل صوت التنبيه
+            playAlertSound();
+
+            // إرسال إشعار سطح المكتب إذا مسموح
+            if (Notification.permission === "granted") {
+              new Notification("تنبيه سعر TON", {
+                body: `سعر TON وصل إلى ${priceUSD.toFixed(2)} دولار!`,
+                icon: "https://cryptologos.cc/logos/the-open-network-ton-logo.png?v=024"
+              });
+            }
+          } else {
+            alertBox.style.display = "none";
+          }
         });
 
         tbody.innerHTML += `<tr style="font-weight:bold; background:#383850;">
@@ -200,6 +239,13 @@
       }
     }
 
+    function playAlertSound() {
+      const audio = new Audio('https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg');
+      audio.play().catch(e => {
+        console.log("تعذر تشغيل صوت التنبيه:", e);
+      });
+    }
+
     function refreshWidgets() {
       document.querySelectorAll("gecko-coin-price-chart-widget").forEach(widget => {
         const clone = widget.cloneNode(true);
@@ -211,6 +257,10 @@
       document.getElementById("tonAmount").addEventListener("input", (e) => {
         portfolio[0].amount = parseFloat(e.target.value) || 0;
         loadPortfolio();
+      });
+
+      document.getElementById("alertPrice").addEventListener("input", (e) => {
+        tonAlertPrice = parseFloat(e.target.value) || 0;
       });
 
       reloadBtn.addEventListener("click", loadPortfolio);
