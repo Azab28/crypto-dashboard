@@ -1,0 +1,17 @@
+{
+  "name": "snapchat-profile-tracker",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Personal tool to fetch a Snapchat public profile picture from a profile link and keep a local history of links/images over time.",
+  "type": "module",
+  "bin": {
+    "snap-tracker": "./src/index.js"
+  },
+  "scripts": {
+    "track": "node src/index.js track",
+    "list": "node src/index.js list"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
